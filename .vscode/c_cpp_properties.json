@@ -1,0 +1,32 @@
+{
+    "configurations": [
+        {
+            "name": "DJGPP",
+            "includePath": [
+                "${workspaceFolder}/**",
+                "/opt/djgpp/include",
+                "/opt/djgpp/lib/gcc/i586-pc-msdosdjgpp/12.2.0/include/c++",
+                "/opt/djgpp/lib/gcc/i586-pc-msdosdjgpp/12.2.0/include/c++/i586-pc-msdosdjgpp",
+                "/opt/djgpp/lib/gcc/i586-pc-msdosdjgpp/12.2.0/include/c++/backward",
+                "/opt/djgpp/lib/gcc/i586-pc-msdosdjgpp/12.2.0/include",
+                "/opt/djgpp/lib/gcc/i586-pc-msdosdjgpp/12.2.0/include-fixed",
+                "/opt/djgpp/i586-pc-msdosdjgpp/sys-include"
+            ],
+            "defines": [
+                "__DJGPP__",
+                "__GO32__",
+                "__MSDOS__"
+            ],
+            "compilerPath": "/opt/djgpp/bin/i586-pc-msdosdjgpp-g++",
+            "compilerArgs": [
+                "-U_POSIX_SOURCE",
+                "-U_STRICT_ANSI"
+
+            ],
+            "cStandard": "c17",
+            "cppStandard": "c++20",
+            "intelliSenseMode": "gcc-x86"
+        }
+    ],
+    "version": 4
+}
