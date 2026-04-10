@@ -1,6 +1,7 @@
 #include <pc.h>
 #include <dpmi.h>
 #include <go32.h>
+#include <stdbool.h>
 #include "keyboard.h"
 
 volatile char keys[128] = {0};
