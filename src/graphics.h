@@ -3,17 +3,21 @@
 
 #include <stdbool.h>
 
-extern unsigned char *screen_buffer;
-extern int row_offset[200]; 
+#define SCREEN_W 320
+#define SCREEN_H 240
 
-bool init_graphics();
+typedef enum { MODE_13H, MODE_X_240 } video_mode_t;
+
+// Exposed for performance-critical code in road.c
+extern unsigned char *vga_mem;
+extern int active_page_offset;
+
+bool init_graphics(video_mode_t mode);
 void shutdown_graphics();
-void put_pixel(int x, int y, unsigned char color);
-void draw_string(int x, int y, const char *s, unsigned char color, int scale);
 
-void blit_full_screen(); 
+void gfx_draw_span(int y, int x1, int x2, unsigned char color);
+void gfx_show(); 
 void wait_vrt();
-void set_mode13h();
-void restore_text_mode();
+void draw_string(int x, int y, const char *s, unsigned char color, int scale);
 
 #endif
