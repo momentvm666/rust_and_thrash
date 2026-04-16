@@ -11,8 +11,8 @@ int main() {
     if (!init_keyboard()) return 1;
     
     init_road();
-    
-    bool running = true;
+ 
+bool running = true;
     fixed cam_x = 0;
     fixed distance = 0; 
     fixed speed = 0;
@@ -20,18 +20,20 @@ int main() {
 
     uclock_t t_last = uclock();
     uclock_t t_now;
-    char debug_str[32] = "Frame: 0.0 ms";
-    int frame_count = 0;
+    char debug_str[32] = "FPS: Calculating...";
+    int frames_this_second = 0;
 
     while (running) {
         t_now = uclock();
         
-        // THE FIX: 64-bit cast prevents overflow during hardware stalls
-        int frame_tenths = (int)(((unsigned long long)(t_now - t_last) * 10000ULL) / UCLOCKS_PER_SEC);
-        t_last = t_now;
-
-        if (frame_count > 0 && frame_count % 10 == 0) {
-            sprintf(debug_str, "Frame: %d.%d ms", frame_tenths / 10, frame_tenths % 10);
+        // Update the counter exactly once per second
+        if (t_now - t_last >= UCLOCKS_PER_SEC) {
+            sprintf(debug_str, "FPS: %d", frames_this_second);
+            frames_this_second = 0;
+            
+            // Realign the timer. We do not just set t_last = t_now to prevent 
+            // drift if the frame processing pushed us slightly over the 1-second mark.
+            t_last += UCLOCKS_PER_SEC; 
         }
 
         if (keys[KEY_ESC]) running = false;
@@ -46,7 +48,8 @@ int main() {
         draw_string(10, 10, debug_str, 15, 1);
 
         gfx_show();
-        frame_count++;
+        
+        frames_this_second++;
     }
 
     shutdown_keyboard();

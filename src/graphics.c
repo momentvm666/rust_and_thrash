@@ -76,12 +76,14 @@ static void set_modex_320x240() {
 }
 
 void gfx_show() {
-    wait_vrt();
-    
-    // Address is exact byte offset. Use 8-bit writes to bypass ET4000 16-bit I/O quirks.
     unsigned int addr = active_page_offset;
+    
+    // 1. Queue the address change
     outportb(0x03D4, 0x0C); outportb(0x03D5, (addr >> 8) & 0xFF);
     outportb(0x03D4, 0x0D); outportb(0x03D5, addr & 0xFF);
+    
+    // 2. Wait for VRT to ensure the hardware latches the queued address
+    wait_vrt();
     
     visual_page_offset = active_page_offset;
     active_page_offset = (active_page_offset == 0) ? 19200 : 0;
@@ -103,41 +105,57 @@ void shutdown_graphics() {
 }
 
 void gfx_draw_span(int y, int x1, int x2, unsigned char color) {
-    if (y < 0 || y >= 240) return;
+    if (y < 0 || y >= 240 || x1 >= x2) return;
     if (x1 < 0) x1 = 0;
     if (x2 > 320) x2 = 320;
-    if (x1 >= x2) return;
 
     int start_addr = active_page_offset + (y * 80) + (x1 >> 2);
     int end_addr = active_page_offset + (y * 80) + ((x2 - 1) >> 2);
     unsigned char *dest = vga_mem + start_addr;
 
+    int left_mask  = (0x0F << (x1 & 3)) & 0x0F;
+    int right_mask = (0x0F >> (3 - ((x2 - 1) & 3))) & 0x0F;
+
     if (start_addr == end_addr) {
-        // Span completely within a single 4-pixel block
-        unsigned char mask = ((1 << (x2 - x1)) - 1) << (x1 & 3);
+        int mask = left_mask & right_mask;
         outportw(0x03C4, (mask << 8) | 0x02);
         *dest = color;
-    } else {
-        // Left edge mask alignment
-        unsigned char left_mask = 0x0F & (0xFF << (x1 & 3));
-        outportw(0x03C4, (left_mask << 8) | 0x02);
-        *dest++ = color;
-
-        // Middle block: blast memory directly
-        int len = end_addr - start_addr - 1;
-        if (len > 0) {
-            outportw(0x03C4, 0x0F02); 
-            vga_fast_fill(dest, color, len);
-            dest += len;
-        }
-
-        // Right edge mask alignment
-        unsigned char right_mask = 0x0F & (0xFF >> (3 - ((x2 - 1) & 3)));
-        outportw(0x03C4, (right_mask << 8) | 0x02);
-        *dest = color;
+        return;
     }
-}
 
+    __asm__ __volatile__ (
+        "movw $0x03C4, %%dx\n\t"
+
+        // Left edge
+        "movb $0x02, %%al\n\t"
+        "movb %1, %%ah\n\t"
+        "outw %%ax, %%dx\n\t"
+        "movb %%bl, (%%edi)\n\t"   // Write color from BL register
+        "incl %%edi\n\t"
+
+        // Middle fill
+        "movl %3, %%ecx\n\t"
+        "subl %2, %%ecx\n\t"
+        "decl %%ecx\n\t"
+        "jle 1f\n\t"               // Skip if no middle bytes exist
+
+        "movw $0x0F02, %%ax\n\t"
+        "outw %%ax, %%dx\n\t"      // Set mask to all 4 planes
+        "movb %%bl, %%al\n\t"      // Move color into AL for stosb
+        "rep stosb\n\t"            // Blast middle bytes
+
+        "1:\n\t"
+        // Right edge
+        "movb $0x02, %%al\n\t"
+        "movb %4, %%ah\n\t"
+        "outw %%ax, %%dx\n\t"
+        "movb %%bl, (%%edi)\n\t"   // Write color from BL register
+
+        : "+D" (dest)
+        : "m" (left_mask), "m" (start_addr), "m" (end_addr), "m" (right_mask), "b" (color)
+        : "eax", "ecx", "edx", "memory"
+    );
+}
 
 
 void draw_string(int x, int y, const char *s, unsigned char color, int scale) {
