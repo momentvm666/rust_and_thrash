@@ -13,6 +13,43 @@ int active_page_offset = 19200;
 static int visual_page_offset = 0;
 static video_mode_t current_mode;
 
+// graphics.c
+
+// Helper to write a smooth 16-step gradient into the VGA DAC
+static void set_color_ramp(int start_index, int fog_r, int fog_g, int fog_b, int true_r, int true_g, int true_b) {
+    // Port 0x3C8 sets the index we want to write to
+    outportb(0x3C8, start_index);
+
+    for (int i = 0; i < 16; i++) {
+        // Interpolate between the fog color (i=0) and the true color (i=15)
+        int r = fog_r + ((true_r - fog_r) * i) / 15;
+        int g = fog_g + ((true_g - fog_g) * i) / 15;
+        int b = fog_b + ((true_b - fog_b) * i) / 15;
+
+        // Port 0x3C9 expects 3 consecutive writes: Red, Green, Blue (0-63)
+        outportb(0x3C9, r);
+        outportb(0x3C9, g);
+        outportb(0x3C9, b);
+    }
+}
+
+void init_palette() {
+    // Define our universal horizon/fog color (A pale, grayish blue)
+    int f_r = 35, f_g = 40, f_b = 45;
+
+    // Grass: Indices 16-31 (Fades from Fog to Dark Green)
+    set_color_ramp(16, f_r, f_g, f_b,  5, 35,  5);
+
+    // Road: Indices 32-47 (Fades from Fog to Dark Asphalt Gray)
+    set_color_ramp(32, f_r, f_g, f_b, 15, 15, 15);
+
+    // Rumble Red: Indices 48-63 (Fades from Fog to Solid Red)
+    set_color_ramp(48, f_r, f_g, f_b, 45,  5,  5);
+
+    // Rumble White: Indices 64-79 (Fades from Fog to Bright Off-White)
+    set_color_ramp(64, f_r, f_g, f_b, 55, 55, 55);
+}
+
 /* * 32-bit inline assembly filler.
  * Writes to the ISA bus are split into 16-bit by the bus controller, 
  * but using 32-bit registers (stosl) saves CPU cycles on the 386DX.

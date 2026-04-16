@@ -9,7 +9,7 @@
 int main() {
     if (!init_graphics(MODE_X_240)) return 1;
     if (!init_keyboard()) return 1;
-    
+    init_palette();   
     init_road();
  
 bool running = true;

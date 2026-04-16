@@ -11,6 +11,7 @@ typedef enum { MODE_13H, MODE_X_240 } video_mode_t;
 // Exposed for performance-critical code in road.c
 extern unsigned char *vga_mem;
 extern int active_page_offset;
+void init_palette();
 
 bool init_graphics(video_mode_t mode);
 void shutdown_graphics();
